@@ -1,0 +1,32 @@
+{
+  "post_frame_defaults": {
+    "post_spacing_ft": 8,
+    "post_size_inches": 6,
+    "embed_depth_ft": 4,
+    "eave_height_ft": 10,
+    "truss_spacing_ft": 2,
+    "roof_pitch": 4,
+    "overhang_ft": 1,
+    "slab_thickness_inches": 4,
+    "girt_spacing_ft": 2
+  },
+  "common_sizes": {
+    "small_shop": { "length_ft": 24, "width_ft": 30 },
+    "standard_shop": { "length_ft": 30, "width_ft": 40 },
+    "large_shop": { "length_ft": 40, "width_ft": 60 },
+    "equipment_barn": { "length_ft": 60, "width_ft": 80 },
+    "horse_barn": { "length_ft": 36, "width_ft": 48 }
+  },
+  "door_presets": {
+    "single_overhead": { "width_ft": 10, "height_ft": 10 },
+    "double_overhead": { "width_ft": 12, "height_ft": 12 },
+    "equipment_overhead": { "width_ft": 14, "height_ft": 14 },
+    "walk_door": { "width_ft": 3, "height_ft": 6.67 },
+    "double_walk": { "width_ft": 6, "height_ft": 6.67 }
+  },
+  "window_presets": {
+    "standard": { "width_ft": 3, "height_ft": 4, "sill_height_ft": 3 },
+    "small": { "width_ft": 2, "height_ft": 2, "sill_height_ft": 4 },
+    "large": { "width_ft": 4, "height_ft": 5, "sill_height_ft": 2.5 }
+  }
+}

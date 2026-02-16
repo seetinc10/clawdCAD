@@ -1,0 +1,34 @@
+# API keys and secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Output files (generated at runtime)
+output/
+
+# Claude Code (may contain permissions with sensitive data)
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Installers and junk files
+*.exe
+nul
+=*
