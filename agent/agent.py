@@ -243,6 +243,88 @@ def _execute_tool(name: str, input_args: dict, state: AgentState) -> str:
             result = macro.create_bathroom_fixtures(**input_args)
             return json.dumps({"status": "ok", "created": result})
 
+        elif name == "generate_floor_plan":
+            from agent.layout_engine import LayoutEngine
+
+            # Validate building dimensions are set
+            if state.building_length_ft <= 0 or state.building_width_ft <= 0:
+                return json.dumps({
+                    "error": "Building dimensions not set. Call create_post_layout first.",
+                })
+
+            engine = LayoutEngine()
+            plan = engine.generate(
+                building_length_ft=state.building_length_ft,
+                building_width_ft=state.building_width_ft,
+                num_bedrooms=input_args.get("num_bedrooms", 3),
+                num_bathrooms=input_args.get("num_bathrooms", 2),
+                open_concept=input_args.get("open_concept", True),
+                has_pantry=input_args.get("has_pantry", True),
+                has_laundry=input_args.get("has_laundry", True),
+                has_mudroom=input_args.get("has_mudroom", True),
+                has_dining=input_args.get("has_dining", False),
+                room_overrides=input_args.get("room_overrides"),
+            )
+
+            # Execute all room placements through MacroBuilder
+            for room in plan.rooms:
+                macro.create_room(
+                    name=room.name,
+                    x_ft=room.x_ft,
+                    y_ft=room.y_ft,
+                    width_ft=room.width_ft,
+                    depth_ft=room.depth_ft,
+                    height_ft=room.height_ft,
+                    room_type=room.room_type,
+                )
+                # Add fixtures if specified
+                if room.fixtures and room.fixtures.startswith("kitchen"):
+                    layout = room.fixtures.split("_")[1].upper() if "_" in room.fixtures else "L"
+                    macro.create_kitchen_fixtures(
+                        room.name, room.x_ft, room.y_ft,
+                        room.width_ft, room.depth_ft, layout=layout,
+                    )
+                elif room.fixtures and room.fixtures.startswith("bathroom"):
+                    has_tub = "tub" in room.fixtures
+                    macro.create_bathroom_fixtures(
+                        room.name, room.x_ft, room.y_ft,
+                        room.width_ft, room.depth_ft, has_tub=has_tub,
+                    )
+
+            # Create hallway rooms
+            for i, hw in enumerate(plan.hallways):
+                macro.create_room(
+                    name=f"Hallway_{i}",
+                    x_ft=hw.x_ft, y_ft=hw.y_ft,
+                    width_ft=hw.width_ft, depth_ft=hw.depth_ft,
+                    height_ft=9.0, room_type="room",
+                )
+
+            # Create interior wall segments
+            for wall in plan.walls:
+                macro.create_interior_wall(
+                    name=wall.name,
+                    start_x_ft=wall.start_x_ft,
+                    start_y_ft=wall.start_y_ft,
+                    end_x_ft=wall.end_x_ft,
+                    end_y_ft=wall.end_y_ft,
+                )
+
+            # Build response summary
+            room_summary = [
+                f"  {r.name}: {r.width_ft:.0f}'x{r.depth_ft:.0f}' at ({r.x_ft:.1f}, {r.y_ft:.1f})"
+                for r in plan.rooms
+            ]
+            return json.dumps({
+                "status": "ok",
+                "rooms_placed": len(plan.rooms),
+                "hallways": len(plan.hallways),
+                "doors": len(plan.doors),
+                "interior_walls": len(plan.walls),
+                "layout": room_summary,
+                "metadata": plan.metadata,
+            })
+
         elif name == "save_document":
             return json.dumps({"status": "ok", "note": "Will save when macro executes"})
 

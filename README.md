@@ -21,6 +21,14 @@ Floor plan view showing interior room layout:
 - Natural language building descriptions -> FreeCAD 3D models
 - Post-frame construction: posts, girts, trusses, purlins, ridge cap, slab, doors, windows
 - Steel rib roof panels and wall panels with color options
+- **Algorithmic interior layout engine** with architectural best practices:
+  - Zone-based room allocation (public/private/service) with split-bedroom pattern
+  - Squarified treemap room packing for optimal aspect ratios
+  - Adjacency-aware hill-climbing optimisation (kitchen next to great room, etc.)
+  - Plumbing clustering to minimise wet wall runs and drain stack distances
+  - Hallway generation with dead-end avoidance and connectivity validation
+  - IRC-compliant door sizing (28"/32"/36") with swing clearance collision detection
+  - Open-concept support (no wall between great room and kitchen)
 - Complete interior buildout: bedrooms, bathrooms, kitchen with island, great room
 - Image upload support for floor plan sketches and reference photos
 - Self-review cycle: agent captures FreeCAD screenshots and corrects mistakes
@@ -41,7 +49,8 @@ clawdbotCAD/
 ├── agent/
 │   ├── agent.py            # Multi-provider LLM agent loop
 │   ├── prompts.py          # System prompt + tool definitions
-│   └── macro_generator.py  # FreeCAD macro code generator
+│   ├── macro_generator.py  # FreeCAD macro code generator
+│   └── layout_engine.py    # Algorithmic floor plan layout engine
 ├── gui/
 │   └── app.py              # Tkinter GUI
 ├── tools/
@@ -49,6 +58,9 @@ clawdbotCAD/
 │   └── freecad_tools.py    # FreeCAD tool functions
 ├── templates/
 │   └── post_frame_defaults.json
+├── test_build.py           # Structural build tests
+├── test_interior.py        # Interior macro generation tests
+├── test_layout_engine.py   # Layout engine tests (22 tests)
 ├── docs/images/            # Screenshots for README
 └── output/                 # Generated macros and .FCStd files
 ```
@@ -130,8 +142,43 @@ python main.py --headless "Design a 30x40 shop with a 12x12 overhead door"
 1. User enters a building description in natural language
 2. The LLM interprets the request and calls tools in sequence
 3. Each tool generates FreeCAD Python macro code for building components
-4. The complete macro is written to a `.py` file and FreeCAD auto-launches it
-5. FreeCAD captures screenshots (isometric, top, front views)
-6. Screenshots are sent back to the agent for self-review
-7. If errors are found, the agent corrects and regenerates (up to 2 rounds)
-8. The final model is saved as `.FCStd`
+4. For residential interiors, the `generate_floor_plan` tool invokes the **layout engine**:
+   - Parses the room program (bedroom/bathroom count, optional rooms)
+   - Allocates zone strips along the building length (split-bedroom pattern)
+   - Packs rooms using squarified treemap with zone-specific custom packers
+   - Optimises adjacency via hill-climbing swaps
+   - Clusters wet rooms to minimise plumbing runs
+   - Generates hallways with dead-end avoidance and connectivity checks
+   - Places IRC-compliant doors with swing clearance validation
+   - Creates interior wall segments with open-concept support
+5. The complete macro is written to a `.py` file and FreeCAD auto-launches it
+6. FreeCAD captures screenshots (isometric, top, front views)
+7. Screenshots are sent back to the agent for self-review
+8. If errors are found, the agent corrects and regenerates (up to 2 rounds)
+9. The final model is saved as `.FCStd`
+
+## Layout Engine
+
+The layout engine (`agent/layout_engine.py`) generates architecturally-sound
+residential floor plans without relying on the LLM for room placement. It
+implements research-backed architectural principles:
+
+| Phase | Description |
+|-------|-------------|
+| 1. Zone allocation | Split-bedroom pattern: master wing, center public/service, secondary wing |
+| 2. Room packing | Squarified treemap + custom packers for center zone and bedroom wings |
+| 3. Adjacency optimisation | Hill-climbing swaps to satisfy mandatory/prohibited adjacency rules |
+| 3b. Plumbing clustering | Minimise Manhattan distance between wet rooms; back-to-back bathroom bonus |
+| 4. Hallway generation | Zone-boundary corridors + wing hallways with dead-end avoidance |
+| 4b. Connectivity check | BFS flood-fill ensures every room reaches main circulation |
+| 5. Door placement | IRC-compliant sizing (28"/32"/36") with 6" corner offset |
+| 5b. Swing clearance | Quarter-circle arc collision detection; auto-flip conflicting swings |
+| 6. Wall generation | Interior walls with door gaps and open-concept support |
+
+## Running Tests
+
+```bash
+python test_layout_engine.py   # 22 layout engine tests
+python test_interior.py        # Interior macro generation
+python test_build.py           # Structural build
+```

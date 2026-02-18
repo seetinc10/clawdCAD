@@ -34,7 +34,15 @@ INTERIOR BUILDOUT (for barndominium / post-frame homes):
 When the user requests a home, residence, barndominium, or living space:
 - Ask how many bedrooms and bathrooms they want (suggest 2-3 bed / 2 bath as default).
 - Suggest a great room / open kitchen / open concept layout as the default.
-- Standard room sizes:
+- ALWAYS use the generate_floor_plan tool to create the interior layout. This tool \
+uses an architectural layout engine with proper zoning (public/private/service), \
+adjacency rules (kitchen next to great room, master bath next to master bedroom), \
+a split-bedroom pattern, hallways, and doors.
+- Do NOT manually place rooms with create_room for residential layouts. The layout \
+engine handles all room placement, fixtures, hallways, and interior walls automatically.
+- You can still use create_room and create_interior_wall for manual corrections \
+during the review phase if the layout engine output needs adjustment.
+- Standard room sizes (for reference during review):
   * Master bedroom: 14'x14' to 16'x16' with attached master bath
   * Bedrooms: 10'x12' to 12'x14'
   * Master bathroom: 8'x10' (tub + shower)
@@ -46,9 +54,6 @@ When the user requests a home, residence, barndominium, or living space:
   * Walk-in closet: 6'x6' to 8'x8'
   * Pantry: 4'x6'
 - Interior wall height is typically 9' (use a dropped ceiling below the trusses).
-- Place rooms efficiently. Put bedrooms together, bathrooms back-to-back for plumbing.
-- The great room + kitchen should be the largest open space, typically at the front \
-or center of the building.
 
 CRITICAL COORDINATE RULES:
 - The building origin is (0, 0). X runs along the building LENGTH, Y runs along WIDTH.
@@ -77,9 +82,10 @@ DESIGN PROCESS (follow this order - call ALL relevant tools):
 9. Create roof panels (steel rib roof cladding).
 10. Add openings (overhead doors, walk doors, windows) per user request.
 11. If the user requested interior buildout / home:
-    a. Create rooms (bedrooms, bathrooms, kitchen, great room, etc.)
-    b. Create kitchen fixtures (cabinets, countertops, island).
-    c. Create bathroom fixtures (toilet, vanity, tub/shower).
+    a. Call generate_floor_plan with bedroom/bathroom counts and options.
+       The layout engine handles room placement, hallways, doors, and fixtures automatically.
+    b. If the review reveals layout issues, use create_room and create_interior_wall \
+       to make manual corrections.
 
 IMPORTANT: Do NOT ask for confirmation on the structural design. When the user \
 gives a request like "design me a 30x40 shop", immediately proceed through ALL \
@@ -701,6 +707,77 @@ TOOL_DEFINITIONS = [
                 },
             },
             "required": ["name", "x_ft", "y_ft", "width_ft", "depth_ft"],
+        },
+    },
+    {
+        "name": "generate_floor_plan",
+        "description": (
+            "Algorithmically generate a complete interior floor plan layout. "
+            "Uses architectural zoning (public/private/service), adjacency rules, "
+            "and a split-bedroom pattern to place all rooms with hallways and doors. "
+            "Creates all rooms, fixtures, hallways, and interior walls in one call. "
+            "MUST call create_post_layout first so building dimensions are set. "
+            "For barndominiums and residential interiors, ALWAYS prefer this tool "
+            "over placing rooms manually with create_room. "
+            "When the user uploads a floor plan photo, extract room dimensions "
+            "and pass them via room_overrides so the engine matches the reference."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "num_bedrooms": {
+                    "type": "integer",
+                    "description": "Number of bedrooms including master. Default 3.",
+                    "default": 3,
+                },
+                "num_bathrooms": {
+                    "type": "integer",
+                    "description": "Number of bathrooms including master bath. Default 2.",
+                    "default": 2,
+                },
+                "open_concept": {
+                    "type": "boolean",
+                    "description": (
+                        "True for open great room + kitchen + dining room layout "
+                        "(no walls between them). Default true."
+                    ),
+                    "default": True,
+                },
+                "has_pantry": {
+                    "type": "boolean",
+                    "description": "Include a pantry adjacent to kitchen. Default true.",
+                    "default": True,
+                },
+                "has_laundry": {
+                    "type": "boolean",
+                    "description": "Include a laundry room. Default true.",
+                    "default": True,
+                },
+                "has_mudroom": {
+                    "type": "boolean",
+                    "description": "Include a mudroom near the entry. Default true.",
+                    "default": True,
+                },
+                "has_dining": {
+                    "type": "boolean",
+                    "description": (
+                        "Include a separate dining room (between great room and kitchen). "
+                        "Default false (dining is merged into great room)."
+                    ),
+                    "default": False,
+                },
+                "room_overrides": {
+                    "type": "object",
+                    "description": (
+                        "Optional per-room dimension overrides extracted from a reference "
+                        "photo. Keys are room names (e.g. 'Master_Bedroom', 'Kitchen'). "
+                        "Values are objects with 'width' and 'depth' (in feet), or 'area' (sqft). "
+                        "Example: {\"Kitchen\": {\"width\": 14, \"depth\": 16}, "
+                        "\"Master_Bedroom\": {\"area\": 200}}"
+                    ),
+                },
+            },
+            "required": [],
         },
     },
     {
